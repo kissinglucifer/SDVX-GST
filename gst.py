@@ -182,7 +182,9 @@ def add_song(song):
             .output(mp3_file, loglevel=loglevel)
             .run()
         )
+        
         song_file = music_tag.load_file(mp3_file)
+        
         song_file['title'] = f"{title} {diff_abb}"
         song_file['artist'] = artist
         song_file['tracknumber'] = song_id
@@ -191,11 +193,13 @@ def add_song(song):
         with open(jacket, 'rb') as jk:
             song_file['artwork'] = jk.read()
         song_file.save()
-
+        print(f" {song_file['tracknumber']} {song_file['title']} {diff_abb} finished" )
 
 try:
     os.mkdir(f'{out_path}')
 except:
     pass
 
-Parallel(n_jobs=jobs)(delayed(add_song)(song) for song in parse_mdb(f'{in_path}/data/others/music_db.xml'))
+Parallel(n_jobs=jobs)(delayed(add_song)(song) for song in parse_mdb(f'{in_path}/data/others/music_db.xml') )
+
+print("GST Complete!")
