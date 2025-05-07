@@ -16,7 +16,7 @@ parser.add_argument('-o output_folder', dest='output', help='Path to output fold
 parser.add_argument('-v game_ver', dest='version', type=int, help='Generate GST for only one version. Leave blank to generate full GST.')
 parser.add_argument('-d after_date', dest='date', type=int, help='Only add songs added past this date as YYYYMMDD. Defaults to 0.', default=0)
 parser.add_argument('-y', '--youtube', dest='yt', action='store_true', help='Save GST as MP4 files for YouTube uploading.')
-parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='Verbose ffmpeg output. Disables progress bar')
+parser.add_argument('-vb, '--verbose', dest='verbose', action='store_true', help='Verbose ffmpeg output. Disables progress bar')
 parser.add_argument('-j job', dest='job', type=int, help='Number of jobs active at once (cpu dependent). Defaults to 2.', default=2)
 
 
