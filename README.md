@@ -16,6 +16,6 @@ python gst.py -i -o [-v] [-d] [-yt] [-j] [-vb]
 
 **-yt: Video** Create GST as .mp4 video files instead of audio files, similarly to how they're uploaded on YouTube. Automatically uses the song jacket as the video. (Defaults false)
 
-**-vb: Verbose** Verbose ffmpeg output. Disables progress bar. (Defaults false)
+**-q: Quiet** Disables verbose ffmpeg output. Uses progress bar instead. (Defaults false)
 
 **-j: Jobs** Number of jobs. Dependent on CPU core count. (Defaults to 2)

@@ -16,8 +16,8 @@ parser.add_argument('-o output_folder', dest='output', help='Path to output fold
 parser.add_argument('-v game_ver', dest='version', type=int, help='Generate GST for only one version. Leave blank to generate full GST.')
 parser.add_argument('-d after_date', dest='date', type=int, help='Only add songs added past this date as YYYYMMDD. Defaults to 0.', default=0)
 parser.add_argument('-y', '--youtube', dest='yt', action='store_true', help='Save GST as MP4 files for YouTube uploading.')
-parser.add_argument('-vb, '--verbose', dest='verbose', action='store_true', help='Verbose ffmpeg output. Disables progress bar')
-parser.add_argument('-j job', dest='job', type=int, help='Number of jobs active at once (cpu dependent). Defaults to 2.', default=2)
+parser.add_argument('-q', '--quiet', dest='quiet', action='store_true', help='Disables verbose ffmpeg output. Enables progress bar')
+parser.add_argument('-j', '--jobs', dest='job', type=int, help='Number of jobs active at once (cpu dependent). Defaults to 2.', default=2)
 
 
 args = parser.parse_args()
@@ -27,10 +27,10 @@ out_path = Path(args.output)
 target_version = args.version
 target_date = args.date
 as_video = args.yt
-if args.verbose:
-    loglevel = "info"
-else:
+if args.quiet:
     loglevel = "quiet"
+else:
+    loglevel = "info"
 jobs = args.job
 
 # Exclude these IDs (automation paradise)
@@ -129,7 +129,7 @@ def parse_mdb(musicdb):
         info = song.find('info')
         version = info.find('version').text
         # TODO: ensure that infinites added to new versions with NEW songs are included here
-        if target_version and version != target_version:  # If getting one version
+        if target_version and int(version) != target_version:  # If getting one version
             continue
         release_date = int(info.find('distribution_date').text)
         if release_date < target_date: # If getting after date
@@ -201,7 +201,9 @@ except:
     pass
 
 # If its verbose, disable progress bar
-if args.verbose: Parallel(n_jobs=jobs)(delayed(add_song)(song) for song in parse_mdb(f'{in_path}/data/others/music_db.xml') )
+if not args.quiet:
+    Parallel(n_jobs=jobs)(delayed(add_song)(song) for song in parse_mdb(f'{in_path}/data/others/music_db.xml') )
+    print("Hello!")
 
 else: Parallel(n_jobs=jobs)(delayed(add_song)(song) for song in tqdm(parse_mdb(f'{in_path}/data/others/music_db.xml') ) )
 
