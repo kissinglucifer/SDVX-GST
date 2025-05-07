@@ -14,7 +14,7 @@ python gst.py -i -o [-v] [-d] [-yt] [-j] [-vb]
 
 **-d: Date** Only get songs added after this date as YYYYMMDD. (Ex. 20240101 for songs added since 2024)
 
-**-y: Video** Create GST as .mp4 video files instead of audio files. Automatically uses the song jacket as the video. (Defaults false)
+**-yt: Video** Create GST as .mp4 video files instead of audio files, similarly to how they're uploaded on YouTube. Automatically uses the song jacket as the video. (Defaults false)
 
 **-vb: Verbose** Verbose ffmpeg output. Disables progress bar. (Defaults false)
 
