@@ -7,6 +7,9 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 from joblib import Parallel, delayed, wrap_non_picklable_objects
 from pathvalidate import sanitize_filename
+from tqdm import tqdm
+from time import sleep
+
 
 parser = argparse.ArgumentParser(prog='gst')
 parser.add_argument('-i input_folder', dest='input', help='Path to contents folder. This is the folder containing data\\.', required=True)
@@ -14,7 +17,7 @@ parser.add_argument('-o output_folder', dest='output', help='Path to output fold
 parser.add_argument('-v game_ver', dest='version', type=int, help='Generate GST for only one version. Leave blank to generate full GST.')
 parser.add_argument('-d after_date', dest='date', type=int, help='Only add songs added past this date as YYYYMMDD. Defaults to 0.', default=0)
 parser.add_argument('-y', '--youtube', dest='yt', action='store_true', help='Save GST as MP4 files for YouTube uploading.')
-parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='Verbose ffmpeg output.')
+parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='Verbose ffmpeg output. Disables progress bar')
 parser.add_argument('-j job', dest='job', type=int, help='Number of jobs active at once (cpu dependent). Defaults to 2.', default=2)
 
 
@@ -26,7 +29,7 @@ target_version = args.version
 target_date = args.date
 as_video = args.yt
 if args.verbose:
-    loglevel = "quiet"
+    loglevel = "info"
 else:
     loglevel = "quiet"
 jobs = args.job
@@ -193,13 +196,14 @@ def add_song(song):
         with open(jacket, 'rb') as jk:
             song_file['artwork'] = jk.read()
         song_file.save()
-        print(f" {song_file['tracknumber']} {song_file['title']} {diff_abb} finished" )
-
 try:
     os.mkdir(f'{out_path}')
 except:
     pass
 
-Parallel(n_jobs=jobs)(delayed(add_song)(song) for song in parse_mdb(f'{in_path}/data/others/music_db.xml') )
+# If its verbose, disable progress bar
+if args.verbose: Parallel(n_jobs=jobs)(delayed(add_song)(song) for song in parse_mdb(f'{in_path}/data/others/music_db.xml') )
+
+else: Parallel(n_jobs=jobs)(delayed(add_song)(song) for song in tqdm(parse_mdb(f'{in_path}/data/others/music_db.xml') ) )
 
 print("GST Complete!")
