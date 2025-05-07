@@ -2,7 +2,7 @@
 Script that takes contents path and creates tagged songs or videos in output folder.
 Requires ffmpeg to be installed and added to PATH.
 ```
-python gst.py -i -o [-v] [-d] [-vid] [-j]
+python gst.py -i -o [-v] [-d] [-yt] [-j] [-vb]
 ```
 
 ## Arguments
