@@ -17,7 +17,7 @@ parser.add_argument('-v game_ver', dest='version', type=int, help='Generate GST 
 parser.add_argument('-d after_date', dest='after_date', type=int, help='Only add songs added after this date as YYYYMMDD. Defaults to 0.', default=0)
 parser.add_argument('-b before_date', dest='before_date', type=int, help='Only add songs added before this date as YYYYMMDD. Defaults to 0.', default=0)
 parser.add_argument('-y', '--youtube', dest='yt', action='store_true', help='Save GST as MP4 files for YouTube uploading.')
-parser.add_argument('-vb', '--verbose', dest='verbose', action='store_true', help='Verbose ffmpeg output. \Disables progress bar')
+parser.add_argument('-vb', '--verbose', dest='verbose', action='store_true', help='Verbose ffmpeg output. \\Disables progress bar')
 parser.add_argument('-j job', dest='job', type=int, help='Number of jobs active at once (cpu dependent). Defaults to 2.', default=2)
 args = parser.parse_args()
 
@@ -174,7 +174,7 @@ def add_song(song):
             (
                 ffmpeg
                 .output(main, cover, f'{out_path}/{sani_artist} - {sani_title}{diff_abb}.mp4', acodec='aac', vcodec='libx264', ab='256k', pix_fmt='yuv420p', loglevel=loglevel)
-                .run()
+                .run(overwrite_output=True)
             )
             return
         
@@ -182,8 +182,8 @@ def add_song(song):
         (
             ffmpeg
             .input(s3v_file)
-            .output(mp3_file, loglevel=loglevel)
-            .run()
+            .output(mp3_file, loglevel=loglevel, overwrite_output=True)
+            .run(overwrite_output=True)
         )
         
         song_file = music_tag.load_file(mp3_file)
