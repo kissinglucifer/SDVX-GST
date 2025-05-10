@@ -8,7 +8,6 @@ from xml.etree import ElementTree as ET
 from joblib import Parallel, delayed, wrap_non_picklable_objects
 from pathvalidate import sanitize_filename
 from tqdm import tqdm
-from time import sleep
 
 
 parser = argparse.ArgumentParser(prog='gst')
