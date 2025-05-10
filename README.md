@@ -18,4 +18,4 @@ python gst.py -i -o [-v] [-d] [-yt] [-j] [-vb]
 
 **-vb: Verbose** Verbose ffmpeg output. Disables progress bar. (Defaults false)
 
-**-j: Jobs** Number of jobs. Dependent on CPU core count. (Defaults to 2)
+**-j: Jobs** Number of jobs. Dependent on CPU core count. (Speeds up GST generation, Defaults to 2)
