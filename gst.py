@@ -14,19 +14,18 @@ parser = argparse.ArgumentParser(prog='gst')
 parser.add_argument('-i input_folder', dest='input', help='Path to contents folder. This is the folder containing data\\.', required=True)
 parser.add_argument('-o output_folder', dest='output', help='Path to output folder. This is where the GST will be.', required=True)
 parser.add_argument('-v game_ver', dest='version', type=int, help='Generate GST for only one version. Leave blank to generate full GST.')
-parser.add_argument('-d after_date', dest='after_date', type=int, help='Only add songs added after this date as YYYYMMDD. Defaults to 0.', default=0)
-parser.add_argument('-b before_date', dest='before_date', type=int, help='Only add songs added before this date as YYYYMMDD. Defaults to 0.', default=0)
+parser.add_argument('-d after_date', dest='date', type=int, help='Only add songs added past this date as YYYYMMDD. Defaults to 0.', default=0)
 parser.add_argument('-y', '--youtube', dest='yt', action='store_true', help='Save GST as MP4 files for YouTube uploading.')
-parser.add_argument('-vb', '--verbose', dest='verbose', action='store_true', help='Verbose ffmpeg output. \\Disables progress bar')
+parser.add_argument('-vb', '--verbose', dest='verbose', action='store_true', help='Verbose ffmpeg output. Disables progress bar')
 parser.add_argument('-j job', dest='job', type=int, help='Number of jobs active at once (cpu dependent). Defaults to 2.', default=2)
+
+
 args = parser.parse_args()
 
 in_path = Path(args.input)
 out_path = Path(args.output)
 target_version = args.version
-after_date = args.after_date
-before_date = args.before_date
-
+target_date = args.date
 as_video = args.yt
 if args.verbose:
     loglevel = "info"
@@ -133,7 +132,7 @@ def parse_mdb(musicdb):
         if target_version and version != target_version:  # If getting one version
             continue
         release_date = int(info.find('distribution_date').text)
-        if release_date < after_date or release_date > before_date: # If getting after date
+        if release_date < target_date: # If getting after date
             continue
         title = info.find('title_name').text
         artist = info.find('artist_name').text
@@ -174,7 +173,7 @@ def add_song(song):
             (
                 ffmpeg
                 .output(main, cover, f'{out_path}/{sani_artist} - {sani_title}{diff_abb}.mp4', acodec='aac', vcodec='libx264', ab='256k', pix_fmt='yuv420p', loglevel=loglevel)
-                .run(overwrite_output=True)
+                .run()
             )
             return
         
@@ -182,8 +181,8 @@ def add_song(song):
         (
             ffmpeg
             .input(s3v_file)
-            .output(mp3_file, loglevel=loglevel, overwrite_output=True)
-            .run(overwrite_output=True)
+            .output(mp3_file, loglevel=loglevel)
+            .run()
         )
         
         song_file = music_tag.load_file(mp3_file)
