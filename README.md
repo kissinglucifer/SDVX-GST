@@ -2,7 +2,7 @@
 Script that takes contents path and creates tagged songs or videos in output folder.
 Requires ffmpeg to be installed and added to PATH.
 ```
-python gst.py -i -o [-v] [-d] [-yt] [-j] [-vb]
+python gst.py -i -o [-v] [-d] [=b] [-yt] [-j] [-vb]
 ```
 
 ## Arguments
@@ -12,7 +12,9 @@ python gst.py -i -o [-v] [-d] [-yt] [-j] [-vb]
 
 **-v: Version** Game version as an integer (Ex. 6 to generate only the Exceed Gear GST)
 
-**-d: Date** Only get songs added after this date as YYYYMMDD. (Ex. 20240101 for songs added since 2024)
+**-d: After Date** Only get songs added after this date as YYYYMMDD. (Ex. 20240101 for songs added since 2024)
+
+**-b: Before Date** Only get songs added before this date as YYYYMMDD. (Ex. 20240101 for songs added before 2024)
 
 **-yt: Video** Create GST as .mp4 video files instead of audio files, similarly to how they're uploaded on YouTube. Automatically uses the song jacket as the video. (Defaults false)
 
