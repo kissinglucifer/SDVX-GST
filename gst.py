@@ -169,16 +169,15 @@ def parse_mdb(musicdb):
             if genre.value & genre_value: 
                 genre_type.append(genre.name) 
                 
-            elif genre.value == None:
-                genre_type.append('OTHER')
+        if genre_value == 0:
+            genre_type.append('OTHER')
 
         music.append((song_id, title, artist, filename, version, inf_version, release_date, genre_type))
     return music
 
 @wrap_non_picklable_objects
-def add_song(song):
+def add_song(song, in_path, out_path, args):
     (song_id, title, artist, filename, version, inf_ver, release_date, genre_type) = song
-    print(song)
     sani_title = sanitize_filename(title)
     sani_artist = sanitize_filename(artist)
     folder_name = f'{in_path}/data/music/{song_id.zfill(4)}_{filename}'
@@ -190,26 +189,30 @@ def add_song(song):
         jacket = triple[1]
         diff = triple[2]
         if args.genre:
+            increment = 0
             for genre in genre_type:
                 if diff=='default':
                     diff_abb = ""
-                    mp3_file = f'{out_path}\\{genre_type[7:]}/{song_id.zfill(4)}. {sani_artist} - {sani_title}.mp3'
+                    mp3_file = f'{out_path}\\{genre_type[increment]}/{song_id.zfill(4)}. {sani_artist} - {sani_title}.mp3'
                 else:
                     diff_abb = diff_decode.get(diff)
                     if not diff_abb:
                         diff_abb = inf_decode.get(inf_ver)
 
-                    mp3_file = f'{out_path}\\{genre_type[7:]}/{song_id.zfill(4)} {diff_abb}. {sani_artist} - {sani_title}.mp3'
+                    mp3_file = f'{out_path}\\{genre_type[increment]}/{song_id.zfill(4)} {diff_abb}. {sani_artist} - {sani_title}.mp3'
 
                 if as_video:
                     main = ffmpeg.input(s3v_file)
                     cover = ffmpeg.input(jacket)
                     (
                         ffmpeg
-                        .output(main, cover, f'{out_path}\\{genre_type[7:]}/{sani_artist} - {sani_title}{diff_abb}.mp4', acodec='aac', vcodec='libx264', ab='256k', pix_fmt='yuv420p', loglevel=loglevel)
+                        .output(main, cover, f'{out_path}\\{genre_type[increment]}/{sani_artist} - {sani_title}{diff_abb}.mp4', acodec='aac', vcodec='libx264', ab='256k', pix_fmt='yuv420p', loglevel=loglevel)
                         .run(overwrite_output=True)
                     )
+                
                     return
+                increment += 1
+                
         else:
             if diff=='default':
                 diff_abb = ""
@@ -245,7 +248,7 @@ def add_song(song):
         song_file['tracknumber'] = song_id
         song_file['album'] = f'SOUND VOLTEX {version_decode.get(version)} GST'
         song_file['year'] = f'{release_date}'[:4]
-        song_file['genre'] =  genre
+        song_file['genre'] =  ", ".join(genre_type)
         with open(jacket, 'rb') as jk:
             song_file['artwork'] = jk.read()
         song_file.save()
@@ -259,8 +262,8 @@ else:
 
 
 # If its verbose, disable progress bar
-if args.verbose: Parallel(n_jobs=jobs)(delayed(add_song)(song) for song in parse_mdb(f'{in_path}/data/others/music_db.xml') )
+if args.verbose: Parallel(n_jobs=jobs)(delayed(add_song)(song, in_path, out_path, args) for song in parse_mdb(f'{in_path}/data/others/music_db.xml') )
 
-else: Parallel(n_jobs=jobs)(delayed(add_song)(song) for song in tqdm(parse_mdb(f'{in_path}/data/others/music_db.xml') ) )
+else: Parallel(n_jobs=jobs)(delayed(add_song)(song, in_path, out_path, args) for song in tqdm(parse_mdb(f'{in_path}/data/others/music_db.xml') ) )
 
 print("GST Complete!")
