@@ -8,20 +8,22 @@ from xml.etree import ElementTree as ET
 from joblib import Parallel, delayed, wrap_non_picklable_objects
 from pathvalidate import sanitize_filename
 from tqdm import tqdm
+from enum import Enum, EnumType
 
 
 parser = argparse.ArgumentParser(prog='gst')
 parser.add_argument('-i input_folder', dest='input', help='Path to contents folder. This is the folder containing data\\.', required=True)
 parser.add_argument('-o output_folder', dest='output', help='Path to output folder. This is where the GST will be.', required=True)
 parser.add_argument('-v game_ver', dest='version', type=int, help='Generate GST for only one version. Leave blank to generate full GST.')
-parser.add_argument('-d after_date', dest='after_date', type=int, help='Only add songs added after this date as YYYYMMDD. Defaults to 0.', default=0)
-parser.add_argument('-b before_date', dest='before_date', type=int, help='Only add songs added before this date as YYYYMMDD. Defaults to 0.', default=0)
+parser.add_argument('-d after_date', dest='after_date', type=int, help='Only add songs added after this date as YYYYMMDD. Defaults to 0.', default=None)
+parser.add_argument('-b before_date', dest='before_date', type=int, help='Only add songs added before this date as YYYYMMDD. Defaults to 0.', default=None)
 parser.add_argument('-y', '--youtube', dest='yt', action='store_true', help='Save GST as MP4 files for YouTube uploading.')
 parser.add_argument('-vb', '--verbose', dest='verbose', action='store_true', help='Verbose ffmpeg output. \\Disables progress bar')
 parser.add_argument('-j job', dest='job', type=int, help='Number of jobs active at once (cpu dependent). Defaults to 2.', default=2)
+parser.add_argument('-g', '--genre', dest='genre', action='store_true', help='Sorts songs into genre folders within output folder',)
 args = parser.parse_args()
 
-in_path = Path(args.input)
+in_path = Path(args.input)    
 out_path = Path(args.output)
 target_version = args.version
 after_date = args.after_date
@@ -90,6 +92,18 @@ inf_decode = {
     "6": "XCD"
 }
 
+
+#code from Tina-otoge
+class Genres(Enum):
+    OTHER = 0
+    EXIT_TUNES = 1
+    FLOOR = 2
+    TOUHOU = 4
+    VOCALOID = 8
+    BEMANI = 16
+    ORIGINAL = 32
+    POP_ANIME = 64
+    HINABITA = 128
 # Get the highest difficulty jacket and song available if only one option is available.
 def get_jk_song(song_id, folder_name):
     jk_pattern = f'{folder_name}/jk_{song_id.zfill(4)}_?_b.png'
@@ -135,8 +149,11 @@ def parse_mdb(musicdb):
             continue
         release_date = int(info.find('distribution_date').text)
         
-        if after_date != 0 or before_date != 0:
-            if release_date < after_date or release_date > before_date: # If getting after date
+        if before_date != None:
+            if release_date > before_date: 
+                continue
+        if after_date != None:
+            if release_date < after_date:
                 continue
         title = info.find('title_name').text
         artist = info.find('artist_name').text
@@ -145,12 +162,23 @@ def parse_mdb(musicdb):
             artist = artist.replace(text, accent)
         filename = info.find('ascii').text
         inf_version = info.find('inf_ver').text # Get infinite version
-        music.append((song_id, title, artist, filename, version, inf_version, release_date))
+        
+        genre_value = int(info.find('genre').text)  # Get genre value
+        genre_type = []
+        
+        for genre in Genres:
+            if genre.value & genre_value: 
+                genre_type.append(genre.name) 
+                
+        if genre_value == 0:
+            genre_type.append('OTHER')
+
+        music.append((song_id, title, artist, filename, version, inf_version, release_date, genre_type))
     return music
 
 @wrap_non_picklable_objects
-def add_song(song):
-    (song_id, title, artist, filename, version, inf_ver, release_date) = song
+def add_song(song, in_path, out_path, args):
+    (song_id, title, artist, filename, version, inf_ver, release_date, genre_type) = song
     sani_title = sanitize_filename(title)
     sani_artist = sanitize_filename(artist)
     folder_name = f'{in_path}/data/music/{song_id.zfill(4)}_{filename}'
@@ -161,26 +189,51 @@ def add_song(song):
         s3v_file = triple[0]
         jacket = triple[1]
         diff = triple[2]
-        if diff=='default':
-            diff_abb = ""
-            mp3_file = f'{out_path}/{song_id.zfill(4)}. {sani_artist} - {sani_title}.mp3'
+        if args.genre:
+            increment = 0
+            for genre in genre_type:
+                if diff=='default':
+                    diff_abb = ""
+                    mp3_file = f'{out_path}\\{genre_type[increment]}/{song_id.zfill(4)}. {sani_artist} - {sani_title}.mp3'
+                else:
+                    diff_abb = diff_decode.get(diff)
+                    if not diff_abb:
+                        diff_abb = inf_decode.get(inf_ver)
+
+                    mp3_file = f'{out_path}\\{genre_type[increment]}/{song_id.zfill(4)} {diff_abb}. {sani_artist} - {sani_title}.mp3'
+
+                if as_video:
+                    main = ffmpeg.input(s3v_file)
+                    cover = ffmpeg.input(jacket)
+                    (
+                        ffmpeg
+                        .output(main, cover, f'{out_path}\\{genre_type[increment]}/{sani_artist} - {sani_title}{diff_abb}.mp4', acodec='aac', vcodec='libx264', ab='256k', pix_fmt='yuv420p', loglevel=loglevel)
+                        .run(overwrite_output=True)
+                    )
+                
+                    return
+                increment += 1
+                
         else:
-            diff_abb = diff_decode.get(diff)
-            if not diff_abb:
-                diff_abb = inf_decode.get(inf_ver)
+            if diff=='default':
+                diff_abb = ""
+                mp3_file = f'{out_path}/{song_id.zfill(4)}. {sani_artist} - {sani_title}.mp3'
+            else:
+                diff_abb = diff_decode.get(diff)
+                if not diff_abb:
+                    diff_abb = inf_decode.get(inf_ver)
 
-            mp3_file = f'{out_path}/{song_id.zfill(4)} {diff_abb}. {sani_artist} - {sani_title}.mp3'
+                mp3_file = f'{out_path}/{song_id.zfill(4)} {diff_abb}. {sani_artist} - {sani_title}.mp3'
 
-        if as_video:
-            main = ffmpeg.input(s3v_file)
-            cover = ffmpeg.input(jacket)
-            (
-                ffmpeg
-                .output(main, cover, f'{out_path}/{sani_artist} - {sani_title}{diff_abb}.mp4', acodec='aac', vcodec='libx264', ab='256k', pix_fmt='yuv420p', loglevel=loglevel)
-                .run(overwrite_output=True)
-            )
-            return
-        
+            if as_video:
+                main = ffmpeg.input(s3v_file)
+                cover = ffmpeg.input(jacket)
+                (
+                    ffmpeg
+                    .output(main, cover, f'{out_path}/{sani_artist} - {sani_title}{diff_abb}.mp4', acodec='aac', vcodec='libx264', ab='256k', pix_fmt='yuv420p', loglevel=loglevel)
+                    .run(overwrite_output=True)
+                )
+                return
         # For audio file, also adds metadata
         (
             ffmpeg
@@ -188,7 +241,7 @@ def add_song(song):
             .output(mp3_file, loglevel=loglevel)
             .run(overwrite_output=True)
         )
-        
+
         song_file = music_tag.load_file(mp3_file)
         
         song_file['title'] = f"{title} {diff_abb}"
@@ -196,17 +249,22 @@ def add_song(song):
         song_file['tracknumber'] = song_id
         song_file['album'] = f'SOUND VOLTEX {version_decode.get(version)} GST'
         song_file['year'] = f'{release_date}'[:4]
+        song_file['genre'] =  ", ".join(genre_type)
         with open(jacket, 'rb') as jk:
             song_file['artwork'] = jk.read()
         song_file.save()
-try:
-    os.mkdir(f'{out_path}')
-except:
-    pass
+if args.genre:
+    for genre in Genres:
+        try:os.mkdir(f'{out_path}\\{str(genre) [7:] }')
+        except:pass
+else:
+    try:os.mkdir(f'{out_path}')
+    except:pass
+
 
 # If its verbose, disable progress bar
-if args.verbose: Parallel(n_jobs=jobs)(delayed(add_song)(song) for song in parse_mdb(f'{in_path}/data/others/music_db.xml') )
+if args.verbose: Parallel(n_jobs=jobs)(delayed(add_song)(song, in_path, out_path, args) for song in parse_mdb(f'{in_path}/data/others/music_db.xml') )
 
-else: Parallel(n_jobs=jobs)(delayed(add_song)(song) for song in tqdm(parse_mdb(f'{in_path}/data/others/music_db.xml') ) )
+else: Parallel(n_jobs=jobs)(delayed(add_song)(song, in_path, out_path, args) for song in tqdm(parse_mdb(f'{in_path}/data/others/music_db.xml') ) )
 
 print("GST Complete!")
